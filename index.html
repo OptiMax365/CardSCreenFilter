@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Filter Screen Pro — Universal Theme Meter</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f4f6fa;
+    overflow: hidden;
+    color: #222;
+  }
+
+  /* ---------- Demo content ---------- */
+  #demo-stage {
+    position: absolute; inset: 0;
+    padding: 80px 40px 40px;
+    background: linear-gradient(135deg,#ffffff 0%,#e9eef7 100%);
+    overflow: auto;
+    z-index: 0;
+  }
+  #demo-stage h1 { margin:0 0 10px; color:#1a2b55; }
+  #demo-stage p  { max-width:720px; line-height:1.55; color:#333; }
+  .demo-card {
+    display:inline-block; vertical-align:top;
+    width:260px; margin:14px; padding:18px;
+    background:#fff; border-radius:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+  }
+  .demo-card h3 { margin:0 0 6px; color:#2b4aa8; }
+  .demo-card p  { font-size:14px; color:#444; }
+  .demo-img {
+    width:100%; height:120px; border-radius:10px;
+    background:linear-gradient(120deg,#ff9a9e,#fad0c4,#a1c4fd,#c2e9fb);
+    margin-bottom:10px;
+  }
+
+  /* ---------- Filter cards ---------- */
+  .filter-card {
+    position: absolute;
+    min-width: 140px;
+    min-height: 100px;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.25);
+    overflow: hidden;
+    z-index: 10;
+    transition: box-shadow .15s ease;
+  }
+  .filter-card.active {
+    box-shadow: 0 0 0 3px #3b82f6, 0 10px 30px rgba(0,0,0,.35);
+    z-index: 11;
+  }
+  .filter-card.type-backdrop {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .filter-card.type-blend .filter-fill {
+    position:absolute; inset:0;
+    pointer-events:none;
+  }
+  .filter-card .filter-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 30px;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    cursor: move;
+    user-select: none;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 2;
+  }
+  .filter-card .filter-header .title { 
+    flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; 
+  }
+  .filter-card .filter-header button {
+    background: transparent; border: none; color: #fff;
+    cursor: pointer; font-size: 14px; padding: 0 4px; opacity: .85;
+  }
+  .filter-card .filter-header button:hover { opacity:1; }
+
+  .resize-handle {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #3b82f6;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    z-index: 3;
+  }
+  .rh-se { right:-6px; bottom:-6px; cursor:nwse-resize; }
+  .rh-sw { left:-6px;  bottom:-6px; cursor:nesw-resize; }
+  .rh-ne { right:-6px; top:-6px;    cursor:nesw-resize; }
+  .rh-nw { left:-6px;  top:-6px;    cursor:nwse-resize; }
+  .rh-n  { left:50%; transform:translateX(-50%); top:-6px; cursor:ns-resize; }
+  .rh-s  { left:50%; transform:translateX(-50%); bottom:-6px; cursor:ns-resize; }
+  .rh-e  { right:-6px; top:50%; transform:translateY(-50%); cursor:ew-resize; }
+  .rh-w  { left:-6px;  top:50%; transform:translateY(-50%); cursor:ew-resize; }
+
+  /* ---------- Toolbar — single horizontal bar ---------- */
+  #toolbar {
+    position: fixed;
+    top: 10px; left: 10px; right: 10px;
+    z-index: 9999;
+    background: rgba(20,24,38,.95);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 14px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    backdrop-filter: blur(10px);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+  }
+  #toolbar::-webkit-scrollbar { height: 4px; }
+  #toolbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
+  #toolbar .brand {
+    font-weight: 700; letter-spacing:.3px;
+    padding-right: 8px; border-right: 1px solid rgba(255,255,255,.2);
+    margin-right: 2px;
+    flex-shrink: 0;
+  }
+  #toolbar button, #toolbar select {
+    background: #2b3350;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.1);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #toolbar button:hover { background: #3b4775; }
+  #toolbar button.primary { background: #3b82f6; }
+  #toolbar button.primary:hover { background: #2563eb; }
+  #toolbar button.success { background: #10b981; }
+  #toolbar button.success:hover { background: #059669; }
+  #toolbar button.pro { 
+    background: linear-gradient(135deg,#f59e0b,#ef4444);
+    font-weight: 600;
+  }
+  #toolbar button.pro:hover { background: linear-gradient(135deg,#d97706,#dc2626); }
+  #toolbar button.danger { background: #b91c1c; }
+  #toolbar button.danger:hover { background: #991b1b; }
+  #toolbar button.icon-btn {
+    padding: 6px 8px;
+    font-size: 14px;
+  }
+  #toolbar button.icon-btn.active {
+    background: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,.5);
+  }
+  #toolbar label { font-size: 11px; opacity:.85; flex-shrink: 0; }
+  #toolbar .separator {
+    width: 1px; height: 22px;
+    background: rgba(255,255,255,.2);
+    margin: 0 2px;
+    flex-shrink: 0;
+  }
+
+  /* ---------- Universal Theme Meter — draggable & resizable ---------- */
+  #theme-meter-container {
+    position: absolute;
+    width: 800px;
+    min-width: 320px;
+    min-height: 140px;
+    background: rgba(20,24,38,.95);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.4);
+    z-index: 9998;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  #theme-meter-container.hidden { display: none; }
+  #theme-meter-container.active {
+    box-shadow: 0 0 0 2px #8b5cf6, 0 10px 40px rgba(139,92,246,.4);
+  }
+
+  #meter-header {
+    background: linear-gradient(90deg, rgba(139,92,246,.3), rgba(59,130,246,.3));
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 32px;
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  #meter-header .meter-title {
+    flex: 1;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #meter-header button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    opacity: .8;
+    border-radius: 4px;
+  }
+  #meter-header button:hover { opacity:1; background: rgba(255,255,255,.1); }
+
+  #meter-body {
+    padding: 14px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #theme-meter {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(90deg,
+      #1e293b 0%, #334155 6.25%, #475569 12.5%, #64748b 18.75%,
+      #94a3b8 25%, #cbd5e1 31.25%, #e2e8f0 37.5%, #f1f5f9 43.75%,
+      #f8fafc 50%, #f1f5f9 56.25%, #e2e8f0 62.5%, #cbd5e1 68.75%,
+      #94a3b8 75%, #64748b 81.25%, #475569 87.5%, #334155 93.75%, #1e293b 100%
+    );
+    border-radius: 10px;
+    cursor: pointer;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  #theme-meter-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    cursor: grab;
+    z-index: 2;
+  }
+  #theme-meter-handle:active { cursor: grabbing; }
+
+  #theme-meter-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10px;
+    color: rgba(255,255,255,.6);
+    flex-shrink: 0;
+  }
+  #current-theme-display {
+    text-align: center;
+    margin-top: 8px;
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  #current-theme-display .theme-name {
+    font-weight: 600;
+    color: #60a5fa;
+  }
+  #current-theme-display .intensity {
+    color: #fbbf24;
+  }
+
+  /* Meter resize handles */
+  .meter-resize {
+    position: absolute;
+    background: #8b5cf6;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    z-index: 4;
+  }
+  .meter-resize.corner { width: 14px; height: 14px; }
+  .meter-resize.edge-h { width: 14px; height: 24px; border-radius: 7px; }
+  .meter-resize.edge-v { width: 24px; height: 14px; border-radius: 7px; }
+  .mr-se { right:-7px; bottom:-7px; cursor:nwse-resize; }
+  .mr-sw { left:-7px;  bottom:-7px; cursor:nesw-resize; }
+  .mr-ne { right:-7px; top:-7px;    cursor:nesw-resize; }
+  .mr-nw { left:-7px;  top:-7px;    cursor:nwse-resize; }
+  .mr-n  { left:50%; transform:translateX(-50%); top:-7px; cursor:ns-resize; }
+  .mr-s  { left:50%; transform:translateX(-50%); bottom:-7px; cursor:ns-resize; }
+  .mr-e  { right:-7px; top:50%; transform:translateY(-50%); cursor:ew-resize; }
+  .mr-w  { left:-7px;  top:50%; transform:translateY(-50%); cursor:ew-resize; }
+
+  /* ---------- Editor ---------- */
+  #editor {
+    position: fixed;
+    right: 16px; top: 70px;
+    width: 300px;
+    background: rgba(20,24,38,.95);
+    color:#fff;
+    border-radius: 14px;
+    padding: 14px;
+    z-index: 9997;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    display: none;
+    font-size: 13px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+  #editor.visible { display:block; }
+  #editor h3 { margin:0 0 10px; font-size:14px; }
+  #editor .row { display:flex; align-items:center; gap:8px; margin:8px 0; }
+  #editor .row label { flex:1; opacity:.85; }
+  #editor select, #editor input[type="color"], #editor input[type="range"], #editor input[type="number"] {
+    background:#2b3350; color:#fff; border:1px solid rgba(255,255,255,.1);
+    padding:5px; border-radius:6px;
+  }
+  #editor input[type="range"] { width:110px; }
+  #editor .presets { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-top:8px; }
+  #editor .presets button {
+    background:#2b3350; color:#fff; border:1px solid rgba(255,255,255,.1);
+    padding:8px; border-radius:8px; cursor:pointer; font-size:12px;
+  }
+  #editor .presets button:hover { background:#3b4775; }
+  #editor .presets button.featured { background:#3b82f6; }
+  #editor .note {
+    font-size: 11px; opacity:.7; margin-top:10px; line-height:1.4;
+    padding: 8px; background: rgba(255,255,255,.05); border-radius:6px;
+  }
+
+  /* ---------- Pro Modal ---------- */
+  #pro-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    backdrop-filter: blur(8px);
+  }
+  #pro-modal.visible { display: flex; }
+  #pro-modal-content {
+    background: linear-gradient(135deg,#1e293b,#0f172a);
+    color: #fff;
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    text-align: center;
+    border: 2px solid rgba(255,255,255,.1);
+  }
+  #pro-modal-content h2 {
+    margin: 0 0 20px;
+    font-size: 28px;
+    background: linear-gradient(135deg,#f59e0b,#ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  #pro-modal-content .price {
+    font-size: 48px;
+    font-weight: 700;
+    margin: 20px 0;
+    color: #fbbf24;
+  }
+  #pro-modal-content .price span { font-size: 18px; opacity: .7; }
+  #pro-modal-content ul {
+    text-align: left;
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+  #pro-modal-content ul li {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  #pro-modal-content ul li:before {
+    content: "✓ ";
+    color: #10b981;
+    font-weight: bold;
+  }
+  #pro-modal-content button {
+    background: linear-gradient(135deg,#f59e0b,#ef4444);
+    color: #fff;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 8px;
+    transition: transform .2s;
+  }
+  #pro-modal-content button:hover { transform: scale(1.05); }
+  #pro-modal-content button.secondary { background: rgba(255,255,255,.1); }
+
+  #hint {
+    position: fixed;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.6);
+    color:#fff; padding:8px 14px; border-radius: 20px;
+    font-size: 12px; z-index: 9996;
+    pointer-events:none;
+  }
+
+  #status {
+    position: fixed;
+    top: 60px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(16,185,129,.9);
+    color:#fff; padding:8px 16px; border-radius: 20px;
+    font-size: 13px; z-index: 99998;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events:none;
+  }
+  #status.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Demo content -->
+<div id="demo-stage">
+  <h1>🌐 Filter Screen Pro — Universal Theme Meter</h1>
+  <p><b>The Universal Theme Meter is now draggable and resizable!</b> Drag it by its purple header,
+     resize from any edge or corner. Hide it with the ✕ button and bring it back with the 🎚️ icon in the toolbar.</p>
+
+  <div class="demo-card">
+    <div class="demo-img"></div>
+    <h3>Article One</h3>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.</p>
+  </div>
+  <div class="demo-card">
+    <div class="demo-img"></div>
+    <h3>Article Two</h3>
+    <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.</p>
+  </div>
+  <div class="demo-card">
+    <div class="demo-img"></div>
+    <h3>Article Three</h3>
+    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.</p>
+  </div>
+</div>
+
+<!-- Toolbar — single horizontal bar -->
+<div id="toolbar">
+  <div class="brand">🎛️ Filter Screen Pro</div>
+  <button class="primary" id="btn-add" title="Add new filter card">➕ Add</button>
+  <button class="success" id="btn-apply" title="Apply current meter theme to selected card">✅ Apply</button>
+  <div class="separator"></div>
+  <button id="btn-unlimited" title="Generate unlimited random themes">∞ Unlimited</button>
+  <button id="btn-edit" title="Open editor for selected card">⚙️ Edit</button>
+  <button id="btn-clear" class="danger" title="Remove all filter cards">🗑️ Clear</button>
+  <div class="separator"></div>
+  <button class="icon-btn" id="btn-toggle-meter" title="Show/Hide Universal Theme Meter">🎚️</button>
+  <label title="Show hint bar"><input type="checkbox" id="toggle-hint" checked> Hint</label>
+  <div class="separator"></div>
+  <button class="pro" id="btn-pro" title="Upgrade to Pro">⭐ Pro $5/mo</button>
+</div>
+
+<!-- Universal Theme Meter — draggable & resizable -->
+<div id="theme-meter-container">
+  <div id="meter-header">
+    <span class="meter-title">🎚️ Universal Theme Meter — Drag to move, resize from edges</span>
+    <button id="btn-hide-meter" title="Hide meter (click 🎚️ in toolbar to restore)">✕</button>
+  </div>
+  <div id="meter-body">
+    <div id="theme-meter">
+      <div id="theme-meter-handle"></div>
+    </div>
+    <div id="theme-meter-labels">
+      <span>← Less Intense</span>
+      <span>Normal</span>
+      <span>More Intense →</span>
+    </div>
+    <div id="current-theme-display">
+      Current: <span class="theme-name">Dark Mode</span> | Intensity: <span class="intensity">100%</span>
+    </div>
+  </div>
+  <!-- 8 resize handles -->
+  <div class="meter-resize corner mr-n"  data-dir="n"></div>
+  <div class="meter-resize corner mr-s"  data-dir="s"></div>
+  <div class="meter-resize corner mr-e"  data-dir="e"></div>
+  <div class="meter-resize corner mr-w"  data-dir="w"></div>
+  <div class="meter-resize corner mr-ne" data-dir="ne"></div>
+  <div class="meter-resize corner mr-nw" data-dir="nw"></div>
+  <div class="meter-resize corner mr-se" data-dir="se"></div>
+  <div class="meter-resize corner mr-sw" data-dir="sw"></div>
+</div>
+
+<!-- Editor -->
+<div id="editor">
+  <h3>🎨 Filter Editor</h3>
+  <div class="row">
+    <label>Filter Type</label>
+    <select id="ed-type">
+      <option value="backdrop">Backdrop (true dark mode)</option>
+      <option value="blend">Color Tint (mix-blend)</option>
+    </select>
+  </div>
+  <div id="backdrop-controls">
+    <div class="row"><label>Invert</label><input type="range" id="ed-invert" min="0" max="100" value="100"></div>
+    <div class="row"><label>Hue Rotate</label><input type="range" id="ed-hue" min="0" max="360" value="180"></div>
+    <div class="row"><label>Brightness</label><input type="range" id="ed-brightness" min="0" max="200" value="100"></div>
+    <div class="row"><label>Contrast</label><input type="range" id="ed-contrast" min="0" max="200" value="100"></div>
+    <div class="row"><label>Saturate</label><input type="range" id="ed-saturate" min="0" max="200" value="100"></div>
+    <div class="row"><label>Sepia</label><input type="range" id="ed-sepia" min="0" max="100" value="0"></div>
+    <div class="row"><label>Blur</label><input type="range" id="ed-bd-blur" min="0" max="20" value="0"></div>
+  </div>
+  <div id="blend-controls" style="display:none;">
+    <div class="row"><label>Color</label><input type="color" id="ed-color" value="#704214"></div>
+    <div class="row"><label>Opacity</label><input type="range" id="ed-opacity" min="0" max="100" value="50"></div>
+    <div class="row">
+      <label>Blend Mode</label>
+      <select id="ed-blend">
+        <option value="multiply">multiply</option>
+        <option value="screen">screen</option>
+        <option value="overlay">overlay</option>
+        <option value="darken">darken</option>
+        <option value="lighten">lighten</option>
+        <option value="color-dodge">color-dodge</option>
+        <option value="color-burn">color-burn</option>
+        <option value="hard-light">hard-light</option>
+        <option value="soft-light">soft-light</option>
+        <option value="difference">difference</option>
+        <option value="exclusion">exclusion</option>
+        <option value="hue">hue</option>
+        <option value="saturation">saturation</option>
+        <option value="color">color</option>
+        <option value="luminosity">luminosity</option>
+      </select>
+    </div>
+  </div>
+  <div class="row"><label>Roundness</label><input type="range" id="ed-radius" min="0" max="60" value="10"></div>
+  <h3 style="margin-top:14px;">⚡ Quick Presets</h3>
+  <div class="presets" id="editor-presets"></div>
+  <div class="note">
+    💡 <b>Dark Mode</b> uses <code>backdrop-filter</code> — a pure visual overlay
+    that doesn't modify any website's code.
+  </div>
+</div>
+
+<div id="hint">💡 Drag the meter by its header • Resize from edges • Hide with ✕, restore with 🎚️</div>
+<div id="status"></div>
+
+<!-- Pro Modal -->
+<div id="pro-modal">
+  <div id="pro-modal-content">
+    <h2>⭐ Upgrade to Filter Screen Pro</h2>
+    <div class="price">$5<span>/month</span></div>
+    <ul>
+      <li>Unlimited theme generation</li>
+      <li>Advanced blend modes & filters</li>
+      <li>Custom theme creator</li>
+      <li>Save unlimited presets</li>
+      <li>Priority support & updates</li>
+      <li>Export/import configurations</li>
+      <li>No watermarks</li>
+    </ul>
+    <button id="btn-upgrade">Upgrade Now — $5/month</button>
+    <button class="secondary" id="btn-close-pro">Maybe Later</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FILTER SCREEN v5 — Draggable/Resizable Meter + Unified Toolbar
+   ============================================================ */
+
+// 16 predefined themes mapped across the meter (0-100)
+const THEMES = [
+  { name: 'Dark Mode', pos: 0, type: 'backdrop', invert: 100, hue: 180, brightness: 100, contrast: 100, saturate: 100, sepia: 0, blur: 0, radius: 10 },
+  { name: 'AMOLED Black', pos: 6.25, type: 'backdrop', invert: 100, hue: 180, brightness: 85, contrast: 110, saturate: 90, sepia: 0, blur: 0, radius: 10 },
+  { name: 'Sepia', pos: 12.5, type: 'backdrop', invert: 0, hue: 0, brightness: 100, contrast: 100, saturate: 100, sepia: 80, blur: 0, radius: 10 },
+  { name: 'Blue Filter', pos: 18.75, type: 'blend', color: '#ff9500', opacity: 35, blend: 'multiply', radius: 10 },
+  { name: 'Warm', pos: 25, type: 'blend', color: '#ffb347', opacity: 30, blend: 'screen', radius: 10 },
+  { name: 'Cool', pos: 31.25, type: 'blend', color: '#4a90e2', opacity: 30, blend: 'multiply', radius: 10 },
+  { name: 'Grayscale', pos: 37.5, type: 'backdrop', invert: 0, hue: 0, brightness: 100, contrast: 100, saturate: 0, sepia: 0, blur: 0, radius: 10 },
+  { name: 'Vintage', pos: 43.75, type: 'backdrop', invert: 0, hue: 0, brightness: 95, contrast: 110, saturate: 80, sepia: 40, blur: 0, radius: 10 },
+  { name: 'Normal', pos: 50, type: 'backdrop', invert: 0, hue: 0, brightness: 100, contrast: 100, saturate: 100, sepia: 0, blur: 0, radius: 10 },
+  { name: 'Red Tint', pos: 56.25, type: 'blend', color: '#ff3b3b', opacity: 35, blend: 'multiply', radius: 10 },
+  { name: 'Green Tint', pos: 62.5, type: 'blend', color: '#3bff6e', opacity: 30, blend: 'multiply', radius: 10 },
+  { name: 'Purple Haze', pos: 68.75, type: 'blend', color: '#9b59b6', opacity: 40, blend: 'overlay', radius: 10 },
+  { name: 'Cyberpunk', pos: 75, type: 'backdrop', invert: 80, hue: 280, brightness: 110, contrast: 120, saturate: 150, sepia: 0, blur: 0, radius: 10 },
+  { name: 'Matrix', pos: 81.25, type: 'blend', color: '#00ff41', opacity: 25, blend: 'screen', radius: 10 },
+  { name: 'Sunset', pos: 87.5, type: 'blend', color: '#ff6b6b', opacity: 35, blend: 'overlay', radius: 10 },
+  { name: 'Ocean', pos: 93.75, type: 'blend', color: '#006994', opacity: 40, blend: 'multiply', radius: 10 },
+  { name: 'Inverted', pos: 100, type: 'backdrop', invert: 100, hue: 0, brightness: 100, contrast: 100, saturate: 100, sepia: 0, blur: 0, radius: 10 }
+];
+
+let customThemes = [];
+
+const state = {
+  cards: [],
+  selectedId: null,
+  nextId: 1,
+  meterPosition: 50,
+  isPro: false,
+  meter: {
+    visible: true,
+    x: 0, y: 0, w: 800, h: 180
+  }
+};
+
+/* ---------- DOM refs ---------- */
+const btnAdd       = document.getElementById('btn-add');
+const btnApply     = document.getElementById('btn-apply');
+const btnUnlimited = document.getElementById('btn-unlimited');
+const btnEdit      = document.getElementById('btn-edit');
+const btnClear     = document.getElementById('btn-clear');
+const btnPro       = document.getElementById('btn-pro');
+const btnToggleMeter = document.getElementById('btn-toggle-meter');
+const btnHideMeter = document.getElementById('btn-hide-meter');
+const editor       = document.getElementById('editor');
+const edType       = document.getElementById('ed-type');
+const backdropCtrl = document.getElementById('backdrop-controls');
+const blendCtrl    = document.getElementById('blend-controls');
+
+const edInvert     = document.getElementById('ed-invert');
+const edHue        = document.getElementById('ed-hue');
+const edBrightness = document.getElementById('ed-brightness');
+const edContrast   = document.getElementById('ed-contrast');
+const edSaturate   = document.getElementById('ed-saturate');
+const edSepia      = document.getElementById('ed-sepia');
+const edBdBlur     = document.getElementById('ed-bd-blur');
+
+const edColor      = document.getElementById('ed-color');
+const edOpacity    = document.getElementById('ed-opacity');
+const edBlend      = document.getElementById('ed-blend');
+const edRadius     = document.getElementById('ed-radius');
+const toggleHint   = document.getElementById('toggle-hint');
+const hint         = document.getElementById('hint');
+const status       = document.getElementById('status');
+
+const meterContainer = document.getElementById('theme-meter-container');
+const meterHeader    = document.getElementById('meter-header');
+const themeMeter     = document.getElementById('theme-meter');
+const meterHandle    = document.getElementById('theme-meter-handle');
+const themeNameEl    = document.querySelector('#current-theme-display .theme-name');
+const intensityEl    = document.querySelector('#current-theme-display .intensity');
+
+const proModal     = document.getElementById('pro-modal');
+const btnUpgrade   = document.getElementById('btn-upgrade');
+const btnClosePro  = document.getElementById('btn-close-pro');
+
+toggleHint.addEventListener('change', () => {
+  hint.style.display = toggleHint.checked ? 'block' : 'none';
+});
+
+edType.addEventListener('change', () => {
+  if (edType.value === 'backdrop') {
+    backdropCtrl.style.display = 'block';
+    blendCtrl.style.display = 'none';
+  } else {
+    backdropCtrl.style.display = 'none';
+    blendCtrl.style.display = 'block';
+  }
+  applyEditorToCard();
+});
+
+/* ---------- Status message ---------- */
+function showStatus(msg) {
+  status.textContent = msg;
+  status.classList.add('show');
+  setTimeout(() => status.classList.remove('show'), 2000);
+}
+
+/* ---------- Universal Theme Meter — position & visibility ---------- */
+function positionMeter() {
+  meterContainer.style.left = state.meter.x + 'px';
+  meterContainer.style.top  = state.meter.y + 'px';
+  meterContainer.style.width  = state.meter.w + 'px';
+  meterContainer.style.height = state.meter.h + 'px';
+}
+
+function showMeter() {
+  state.meter.visible = true;
+  meterContainer.classList.remove('hidden');
+  btnToggleMeter.classList.add('active');
+  saveState();
+}
+
+function hideMeter() {
+  state.meter.visible = false;
+  meterContainer.classList.add('hidden');
+  btnToggleMeter.classList.remove('active');
+  saveState();
+  showStatus('🎚️ Meter hidden. Click 🎚️ in toolbar to restore.');
+}
+
+function toggleMeter() {
+  if (state.meter.visible) hideMeter();
+  else showMeter();
+}
+
+btnToggleMeter.addEventListener('click', toggleMeter);
+btnHideMeter.addEventListener('click', (e) => {
+  e.stopPropagation();
+  hideMeter();
+});
+
+/* ---------- Universal Theme Meter — drag ---------- */
+let isDraggingMeter = false;
+let meterDragStart = { x: 0, y: 0, origX: 0, origY: 0 };
+
+function startMeterDrag(e) {
+  if (e.target.tagName === 'BUTTON') return;
+  isDraggingMeter = true;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  meterDragStart = {
+    x: clientX, y: clientY,
+    origX: state.meter.x, origY: state.meter.y
+  };
+  meterContainer.classList.add('active');
+  e.preventDefault();
+}
+
+function moveMeterDrag(e) {
+  if (!isDraggingMeter) return;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  state.meter.x = meterDragStart.origX + (clientX - meterDragStart.x);
+  state.meter.y = meterDragStart.origY + (clientY - meterDragStart.y);
+  positionMeter();
+}
+
+function endMeterDrag() {
+  if (!isDraggingMeter) return;
+  isDraggingMeter = false;
+  meterContainer.classList.remove('active');
+  saveState();
+}
+
+meterHeader.addEventListener('mousedown', startMeterDrag);
+meterHeader.addEventListener('touchstart', (e) => {
+  startMeterDrag(e.touches[0]);
+}, {passive:false});
+document.addEventListener('mousemove', moveMeterDrag);
+document.addEventListener('touchmove', (e) => {
+  if (isDraggingMeter) moveMeterDrag(e.touches[0]);
+}, {passive:false});
+document.addEventListener('mouseup', endMeterDrag);
+document.addEventListener('touchend', endMeterDrag);
+
+/* ---------- Universal Theme Meter — resize ---------- */
+let isResizingMeter = false;
+let meterResizeStart = {};
+
+function startMeterResize(e, dir) {
+  isResizingMeter = true;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  meterResizeStart = {
+    x: clientX, y: clientY,
+    origX: state.meter.x, origY: state.meter.y,
+    origW: state.meter.w, origH: state.meter.h,
+    dir: dir
+  };
+  meterContainer.classList.add('active');
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function moveMeterResize(e) {
+  if (!isResizingMeter) return;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  const dx = clientX - meterResizeStart.x;
+  const dy = clientY - meterResizeStart.y;
+  const dir = meterResizeStart.dir;
+
+  let nx = meterResizeStart.origX;
+  let ny = meterResizeStart.origY;
+  let nw = meterResizeStart.origW;
+  let nh = meterResizeStart.origH;
+
+  if (dir.includes('e')) nw = Math.max(320, meterResizeStart.origW + dx);
+  if (dir.includes('s')) nh = Math.max(140, meterResizeStart.origH + dy);
+  if (dir.includes('w')) {
+    nw = Math.max(320, meterResizeStart.origW - dx);
+    nx = meterResizeStart.origX + meterResizeStart.origW - nw;
+  }
+  if (dir.includes('n')) {
+    nh = Math.max(140, meterResizeStart.origH - dy);
+    ny = meterResizeStart.origY + meterResizeStart.origH - nh;
+  }
+
+  state.meter.x = nx;
+  state.meter.y = ny;
+  state.meter.w = nw;
+  state.meter.h = nh;
+  positionMeter();
+}
+
+function endMeterResize() {
+  if (!isResizingMeter) return;
+  isResizingMeter = false;
+  meterContainer.classList.remove('active');
+  saveState();
+}
+
+meterContainer.querySelectorAll('.meter-resize').forEach(h => {
+  h.addEventListener('mousedown', (e) => startMeterResize(e, h.dataset.dir));
+  h.addEventListener('touchstart', (e) => startMeterResize(e.touches[0], h.dataset.dir), {passive:false});
+});
+document.addEventListener('mousemove', moveMeterResize);
+document.addEventListener('touchmove', (e) => {
+  if (isResizingMeter) moveMeterResize(e.touches[0]);
+}, {passive:false});
+document.addEventListener('mouseup', endMeterResize);
+document.addEventListener('touchend', endMeterResize);
+
+/* ---------- Universal Theme Meter — slider ---------- */
+function getThemeFromPosition(pos) {
+  let closest = THEMES[0];
+  let minDist = Math.abs(pos - closest.pos);
+  for (let theme of THEMES) {
+    const dist = Math.abs(pos - theme.pos);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = theme;
+    }
+  }
+  const maxDist = 6.25;
+  const intensity = Math.max(0, 100 - (minDist / maxDist * 100));
+  return { theme: closest, intensity };
+}
+
+function updateMeterUI() {
+  const pos = state.meterPosition;
+  meterHandle.style.left = pos + '%';
+  const { theme, intensity } = getThemeFromPosition(pos);
+  themeNameEl.textContent = theme.name;
+  intensityEl.textContent = Math.round(intensity) + '%';
+  return { theme, intensity };
+}
+
+function applyMeterToSelectedCard() {
+  if (state.selectedId == null) {
+    showStatus('⚠️ No filter card selected. Click a card first.');
+    return;
+  }
+  const c = state.cards.find(c => c.id === state.selectedId);
+  if (!c) return;
+  const { theme, intensity } = updateMeterUI();
+  const intensityScale = intensity / 100;
+  if (theme.type === 'backdrop') {
+    c.type = 'backdrop';
+    c.invert = theme.invert * intensityScale;
+    c.hue = theme.hue * intensityScale;
+    c.brightness = 100 + (theme.brightness - 100) * intensityScale;
+    c.contrast = 100 + (theme.contrast - 100) * intensityScale;
+    c.saturate = 100 + (theme.saturate - 100) * intensityScale;
+    c.sepia = theme.sepia * intensityScale;
+    c.blur = theme.blur * intensityScale;
+  } else {
+    c.type = 'blend';
+    c.color = theme.color;
+    c.opacity = theme.opacity * intensityScale;
+    c.blend = theme.blend;
+  }
+  c.radius = theme.radius;
+  c.preset = theme.name;
+  renderCard(c);
+  syncEditorFromCard();
+  saveState();
+}
+
+let isDraggingSlider = false;
+
+function updateSliderFromEvent(e) {
+  if (!isDraggingSlider) return;
+  const rect = themeMeter.getBoundingClientRect();
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  let pos = ((clientX - rect.left) / rect.width) * 100;
+  pos = Math.max(0, Math.min(100, pos));
+  state.meterPosition = pos;
+  applyMeterToSelectedCard();
+}
+
+function startSliderDrag(e) {
+  isDraggingSlider = true;
+  updateSliderFromEvent(e);
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function endSliderDrag() {
+  isDraggingSlider = false;
+}
+
+meterHandle.addEventListener('mousedown', startSliderDrag);
+meterHandle.addEventListener('touchstart', (e) => startSliderDrag(e.touches[0]), {passive:false});
+themeMeter.addEventListener('mousedown', (e) => {
+  if (e.target === meterHandle) return;
+  startSliderDrag(e);
+});
+themeMeter.addEventListener('touchstart', (e) => {
+  if (e.target === meterHandle) return;
+  startSliderDrag(e.touches[0]);
+}, {passive:false});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingSlider) updateSliderFromEvent(e);
+});
+document.addEventListener('touchmove', (e) => {
+  if (isDraggingSlider) {
+    updateSliderFromEvent(e.touches[0]);
+  }
+}, {passive:false});
+document.addEventListener('mouseup', () => {
+  if (isDraggingSlider) {
+    endSliderDrag();
+    saveState();
+  }
+});
+document.addEventListener('touchend', () => {
+  if (isDraggingSlider) {
+    endSliderDrag();
+    saveState();
+  }
+});
+
+/* ---------- Card creation ---------- */
+function createCard(opts = {}) {
+  const id = state.nextId++;
+  const { theme, intensity } = getThemeFromPosition(state.meterPosition);
+  const card = {
+    id,
+    x: opts.x ?? (80 + (id * 30) % 200),
+    y: opts.y ?? (120 + (id * 30) % 150),
+    w: opts.w ?? 520,
+    h: opts.h ?? 380,
+    preset: opts.preset || theme.name,
+    type: opts.type ?? theme.type,
+    invert:    opts.invert    ?? theme.invert    ?? 0,
+    hue:       opts.hue       ?? theme.hue       ?? 0,
+    brightness:opts.brightness ?? theme.brightness ?? 100,
+    contrast:  opts.contrast  ?? theme.contrast  ?? 100,
+    saturate:  opts.saturate  ?? theme.saturate  ?? 100,
+    sepia:     opts.sepia     ?? theme.sepia     ?? 0,
+    blur:      opts.blur      ?? theme.blur      ?? 0,
+    color:     opts.color     ?? theme.color     ?? '#000000',
+    opacity:   opts.opacity   ?? theme.opacity   ?? 50,
+    blend:     opts.blend     ?? theme.blend     ?? 'multiply',
+    radius:    opts.radius    ?? theme.radius    ?? 10
+  };
+  state.cards.push(card);
+  renderCard(card);
+  selectCard(id);
+  saveState();
+  showStatus(`✅ Filter #${id} created with ${card.preset} theme`);
+  return card;
+}
+
+function buildBackdropFilter(c) {
+  const parts = [];
+  if (c.blur > 0)       parts.push(`blur(${c.blur}px)`);
+  if (c.invert !== 0)   parts.push(`invert(${c.invert}%)`);
+  if (c.hue !== 0)      parts.push(`hue-rotate(${c.hue}deg)`);
+  if (c.brightness !== 100) parts.push(`brightness(${c.brightness}%)`);
+  if (c.contrast !== 100)   parts.push(`contrast(${c.contrast}%)`);
+  if (c.saturate !== 100)   parts.push(`saturate(${c.saturate}%)`);
+  if (c.sepia > 0)      parts.push(`sepia(${c.sepia}%)`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+
+function renderCard(c) {
+  let el = document.getElementById('fc-' + c.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'filter-card';
+    el.id = 'fc-' + c.id;
+    el.innerHTML = `
+      <div class="filter-fill"></div>
+      <div class="filter-header">
+        <span class="title">Filter #${c.id}</span>
+        <button data-act="delete" title="Delete">✕</button>
+      </div>
+      <div class="resize-handle rh-n"  data-dir="n"></div>
+      <div class="resize-handle rh-s"  data-dir="s"></div>
+      <div class="resize-handle rh-e"  data-dir="e"></div>
+      <div class="resize-handle rh-w"  data-dir="w"></div>
+      <div class="resize-handle rh-ne" data-dir="ne"></div>
+      <div class="resize-handle rh-nw" data-dir="nw"></div>
+      <div class="resize-handle rh-se" data-dir="se"></div>
+      <div class="resize-handle rh-sw" data-dir="sw"></div>
+    `;
+    document.body.appendChild(el);
+
+    const header = el.querySelector('.filter-header');
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      startDrag(e, c);
+    });
+    header.addEventListener('touchstart', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      startDrag(e.touches[0], c);
+    }, {passive:false});
+
+    el.querySelectorAll('.resize-handle').forEach(h => {
+      h.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        startResize(e, c, h.dataset.dir);
+      });
+      h.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        startResize(e.touches[0], c, h.dataset.dir);
+      }, {passive:false});
+    });
+
+    el.querySelector('[data-act="delete"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCard(c.id);
+    });
+
+    el.addEventListener('mousedown', () => selectCard(c.id));
+  }
+
+  el.style.left   = c.x + 'px';
+  el.style.top    = c.y + 'px';
+  el.style.width  = c.w + 'px';
+  el.style.height = c.h + 'px';
+  el.style.borderRadius = c.radius + 'px';
+  el.querySelector('.title').textContent = `Filter #${c.id} — ${c.preset || 'Custom'}`;
+
+  if (c.type === 'backdrop') {
+    el.classList.add('type-backdrop');
+    el.classList.remove('type-blend');
+    el.style.mixBlendMode = '';
+    el.style.background = 'transparent';
+    const bf = buildBackdropFilter(c);
+    el.style.backdropFilter = bf;
+    el.style.webkitBackdropFilter = bf;
+  } else {
+    el.classList.add('type-blend');
+    el.classList.remove('type-backdrop');
+    el.style.backdropFilter = 'none';
+    el.style.webkitBackdropFilter = 'none';
+    el.style.mixBlendMode = c.blend;
+    const fill = el.querySelector('.filter-fill');
+    fill.style.background = c.color;
+    fill.style.opacity = c.opacity / 100;
+  }
+}
+
+function selectCard(id) {
+  state.selectedId = id;
+  document.querySelectorAll('.filter-card').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('fc-' + id);
+  if (el) el.classList.add('active');
+  syncEditorFromCard();
+}
+
+function deleteCard(id) {
+  const el = document.getElementById('fc-' + id);
+  if (el) el.remove();
+  state.cards = state.cards.filter(c => c.id !== id);
+  if (state.selectedId === id) {
+    state.selectedId = state.cards.length > 0 ? state.cards[state.cards.length - 1].id : null;
+    if (state.selectedId) selectCard(state.selectedId);
+  }
+  saveState();
+  showStatus(`🗑️ Filter #${id} deleted`);
+}
+
+/* ---------- Card drag ---------- */
+function startDrag(e, card) {
+  e.preventDefault();
+  selectCard(card.id);
+  const el = document.getElementById('fc-' + card.id);
+  const startX = e.clientX, startY = e.clientY;
+  const origX = card.x, origY = card.y;
+  function move(ev) {
+    card.x = origX + (ev.clientX - startX);
+    card.y = origY + (ev.clientY - startY);
+    el.style.left = card.x + 'px';
+    el.style.top  = card.y + 'px';
+  }
+  function up() {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    document.removeEventListener('touchmove', moveTouch);
+    document.removeEventListener('touchend', up);
+    saveState();
+  }
+  function moveTouch(ev) { move(ev.touches[0]); }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+  document.addEventListener('touchmove', moveTouch, {passive:false});
+  document.addEventListener('touchend', up);
+}
+
+/* ---------- Card resize ---------- */
+function startResize(e, card, dir) {
+  e.preventDefault();
+  selectCard(card.id);
+  const el = document.getElementById('fc-' + card.id);
+  const startX = e.clientX, startY = e.clientY;
+  const origX = card.x, origY = card.y, origW = card.w, origH = card.h;
+  function move(ev) {
+    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    let nx = origX, ny = origY, nw = origW, nh = origH;
+    if (dir.includes('e')) nw = Math.max(140, origW + dx);
+    if (dir.includes('s')) nh = Math.max(100, origH + dy);
+    if (dir.includes('w')) { nw = Math.max(140, origW - dx); nx = origX + origW - nw; }
+    if (dir.includes('n')) { nh = Math.max(100, origH - dy); ny = origY + origH - nh; }
+    card.x = nx; card.y = ny; card.w = nw; card.h = nh;
+    el.style.left = nx + 'px';
+    el.style.top  = ny + 'px';
+    el.style.width = nw + 'px';
+    el.style.height = nh + 'px';
+  }
+  function up() {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    document.removeEventListener('touchmove', moveTouch);
+    document.removeEventListener('touchend', up);
+    saveState();
+  }
+  function moveTouch(ev) { move(ev.touches[0]); }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+  document.addEventListener('touchmove', moveTouch, {passive:false});
+  document.addEventListener('touchend', up);
+}
+
+/* ---------- Editor ---------- */
+function syncEditorFromCard() {
+  const c = state.cards.find(c => c.id === state.selectedId);
+  if (!c) return;
+  edType.value = c.type;
+  if (c.type === 'backdrop') {
+    backdropCtrl.style.display = 'block';
+    blendCtrl.style.display = 'none';
+    edInvert.value     = c.invert;
+    edHue.value        = c.hue;
+    edBrightness.value = c.brightness;
+    edContrast.value   = c.contrast;
+    edSaturate.value   = c.saturate;
+    edSepia.value      = c.sepia;
+    edBdBlur.value     = c.blur;
+  } else {
+    backdropCtrl.style.display = 'none';
+    blendCtrl.style.display = 'block';
+    edColor.value   = c.color;
+    edOpacity.value = c.opacity;
+    edBlend.value   = c.blend;
+  }
+  edRadius.value = c.radius;
+}
+
+function applyEditorToCard() {
+  const c = state.cards.find(c => c.id === state.selectedId);
+  if (!c) return;
+  c.type = edType.value;
+  if (c.type === 'backdrop') {
+    c.invert     = +edInvert.value;
+    c.hue        = +edHue.value;
+    c.brightness = +edBrightness.value;
+    c.contrast   = +edContrast.value;
+    c.saturate   = +edSaturate.value;
+    c.sepia      = +edSepia.value;
+    c.blur       = +edBdBlur.value;
+  } else {
+    c.color   = edColor.value;
+    c.opacity = +edOpacity.value;
+    c.blend   = edBlend.value;
+  }
+  c.radius = +edRadius.value;
+  c.preset = 'custom';
+  renderCard(c);
+  saveState();
+}
+
+[edType, edInvert, edHue, edBrightness, edContrast, edSaturate, edSepia, edBdBlur,
+ edColor, edOpacity, edBlend, edRadius].forEach(inp => {
+  inp.addEventListener('input', applyEditorToCard);
+});
+
+/* ---------- Unlimited Theme Generator ---------- */
+function generateRandomTheme() {
+  const types = ['backdrop', 'blend'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  if (type === 'backdrop') {
+    return {
+      name: `Custom #${customThemes.length + 1}`,
+      type: 'backdrop',
+      invert: Math.random() * 100,
+      hue: Math.random() * 360,
+      brightness: 80 + Math.random() * 40,
+      contrast: 80 + Math.random() * 40,
+      saturate: 50 + Math.random() * 150,
+      sepia: Math.random() * 100,
+      blur: Math.random() * 5,
+      radius: 10
+    };
+  } else {
+    const colors = ['#ff6b6b','#4ecdc4','#45b7d1','#f7b731','#5f27cd','#00d2d3','#ff9ff3','#54a0ff','#5f27cd','#01a3a4'];
+    const blends = ['multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference'];
+    return {
+      name: `Custom #${customThemes.length + 1}`,
+      type: 'blend',
+      color: colors[Math.floor(Math.random() * colors.length)],
+      opacity: 20 + Math.random() * 50,
+      blend: blends[Math.floor(Math.random() * blends.length)],
+      radius: 10
+    };
+  }
+}
+
+function generateUnlimitedThemes() {
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    customThemes.push(generateRandomTheme());
+  }
+  updateEditorPresets();
+  showStatus(`✨ Generated ${count} new custom themes!`);
+}
+
+function updateEditorPresets() {
+  const container = document.getElementById('editor-presets');
+  container.innerHTML = '';
+  THEMES.slice(0, 8).forEach(theme => {
+    const btn = document.createElement('button');
+    btn.textContent = theme.name;
+    btn.addEventListener('click', () => {
+      if (state.selectedId == null) { showStatus('⚠️ No filter card selected'); return; }
+      const c = state.cards.find(c => c.id === state.selectedId);
+      if (!c) return;
+      Object.assign(c, { preset: theme.name }, theme);
+      renderCard(c);
+      syncEditorFromCard();
+      saveState();
+      showStatus(`✅ Applied ${theme.name}`);
+    });
+    container.appendChild(btn);
+  });
+  customThemes.slice(-8).forEach(theme => {
+    const btn = document.createElement('button');
+    btn.textContent = theme.name;
+    btn.style.background = '#8b5cf6';
+    btn.addEventListener('click', () => {
+      if (state.selectedId == null) { showStatus('⚠️ No filter card selected'); return; }
+      const c = state.cards.find(c => c.id === state.selectedId);
+      if (!c) return;
+      Object.assign(c, { preset: theme.name }, theme);
+      renderCard(c);
+      syncEditorFromCard();
+      saveState();
+      showStatus(`✅ Applied ${theme.name}`);
+    });
+    container.appendChild(btn);
+  });
+}
+
+/* ---------- Toolbar ---------- */
+btnAdd.addEventListener('click', () => createCard({}));
+btnApply.addEventListener('click', () => {
+  applyMeterToSelectedCard();
+  showStatus('✅ Theme applied from meter');
+});
+btnUnlimited.addEventListener('click', generateUnlimitedThemes);
+btnEdit.addEventListener('click', () => {
+  if (state.selectedId == null) {
+    showStatus('⚠️ No filter card selected. Click a card first.');
+    return;
+  }
+  editor.classList.toggle('visible');
+});
+btnClear.addEventListener('click', () => {
+  if (!confirm('Remove all filter cards?')) return;
+  state.cards.forEach(c => {
+    const el = document.getElementById('fc-' + c.id);
+    if (el) el.remove();
+  });
+  state.cards = [];
+  state.selectedId = null;
+  saveState();
+  showStatus('🗑️ All filters cleared');
+});
+btnPro.addEventListener('click', () => proModal.classList.add('visible'));
+btnUpgrade.addEventListener('click', () => {
+  state.isPro = true;
+  proModal.classList.remove('visible');
+  showStatus('⭐ Welcome to Pro! All features unlocked.');
+});
+btnClosePro.addEventListener('click', () => proModal.classList.remove('visible'));
+
+/* ---------- Persistence ---------- */
+function saveState() {
+  try {
+    localStorage.setItem('filterScreenV5', JSON.stringify({
+      cards: state.cards,
+      nextId: state.nextId,
+      meterPosition: state.meterPosition,
+      customThemes: customThemes,
+      meter: state.meter,
+      isPro: state.isPro
+    }));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('filterScreenV5');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    state.nextId = data.nextId || 1;
+    state.meterPosition = data.meterPosition || 50;
+    customThemes = data.customThemes || [];
+    state.isPro = data.isPro || false;
+    if (data.meter) {
+      state.meter = { ...state.meter, ...data.meter };
+    }
+    (data.cards || []).forEach(c => {
+      state.cards.push(c);
+      renderCard(c);  
+    });
+    if (state.cards.length > 0) {
+      selectCard(state.cards[state.cards.length - 1].id);
+    }
+  } catch(e) {}
+}
+
+/* ---------- Boot ---------- */
+loadState();
+updateEditorPresets();
+
+// Default meter position if first load
+if (!localStorage.getItem('filterScreenV5')) {
+  state.meter.x = Math.max(20, (window.innerWidth - state.meter.w) / 2);
+  state.meter.y = window.innerHeight - state.meter.h - 30;
+}
+
+positionMeter();
+updateMeterUI();
+
+// Apply visibility state
+if (state.meter.visible) {
+  btnToggleMeter.classList.add('active');
+} else {
+  meterContainer.classList.add('hidden');
+  btnToggleMeter.classList.remove('active');
+}
+
+if (state.cards.length === 0) {
+  createCard({ preset: 'Dark Mode', x: 120, y: 160, w: 640, h: 420 });
+}
+
+// Handle window resize — keep meter on screen
+window.addEventListener('resize', () => {
+  state.meter.x = Math.min(state.meter.x, window.innerWidth - 100);
+  state.meter.y = Math.min(state.meter.y, window.innerHeight - 80);
+  state.meter.x = Math.max(0, state.meter.x);
+  state.meter.y = Math.max(60, state.meter.y);
+  positionMeter();
+});
+</script>
+</body>
+</html>
